@@ -3,6 +3,7 @@
 """
 # %% Imports
 import numpy as np
+import matplotlib.pyplot as plt
 from sklearn import preprocessing as skl
 # To import my own module requires this mess
 import sys
@@ -92,7 +93,7 @@ def make_truth_data(action_sequence, epochs_per_action):
         
     return instructed_action # Returns the array of instructed actions at associated epochs
 
-def crop_mi_inputs(features, truth_labels, included_truth_labels):
+def crop_mi_inputs(features, truth_labels, included_truth_labels): # --- MAY BE DOABLE WITH NP.ARRAY SIMPLIFICATION!!!
     '''crop_mi_inputs
     '''
     bool_index = [] # Initialize an empty list to store the boolean indexes
@@ -109,5 +110,24 @@ def crop_mi_inputs(features, truth_labels, included_truth_labels):
 # %% Part 2 Method Calls
 
 emg_data, emg_time = load_data("Smiechowski") # Load in data
-epoched_data = epoch_data(emg_data) # Epoch the data
+epoched_data = epoch_data(emg_data, 500, 1) # Epoch the data
 features, feature_shorthands = extract_features(epoched_data) # Extract the features and the shorthands // seriously why the shorthands?
+instructed_action = make_truth_data(['rest','rock','rest','paper','rest','scissors']*10, 1) # Create the truth labels
+truth_labels_ps, features_ps = crop_mi_inputs(features, instructed_action, ['paper','scissors']) # Crop out only the paper and scissors labels and features
+
+# %% Part 3
+
+def scatter_plot(two_features, feature_names, truth_matrix):
+    '''scatter_plot
+    '''
+    # Two features is split into 4 variables for ease of use and readability // It's 2021, memory usage is a distant memory, seriously though back when I was all mCU all the time I had an optimization obsession
+    # Paper features
+    feature1_paper = two_features[:,0][truth_matrix == 'paper'] # The first feature
+    feature2_paper = two_features[:,1][truth_matrix == 'paper'] # The second feature
+    # Scissor features
+    feature1_scissors = two_features[:,0][truth_matrix == 'scissors'] # The first feature
+    feature2_scissors = two_features[:,1][truth_matrix == 'scissors'] # The second feature
+    
+    # Plot the features
+    plt.scatter(feature1_paper, feature2_paper)
+    plt.scatter(feature1_scissors, feature2_scissors)
