@@ -6,13 +6,15 @@ import numpy as np
 from sklearn import preprocessing as skl
 # To import my own module requires this mess
 import sys
-sys.path.insert(1, r'C:\Users\Artur Smiechowski\Documents\BME227_Code\Lab_5_BME_227')
+#sys.path.insert(1, r'C:\Users\Artur Smiechowski\Documents\BME227_Code\Lab_5_BME_227')
+sys.path.insert(1, r'F:\Python_Projects\Lab_5_BME_227') # Working across 2 machines have different paths for each
 import Reader
 
 # %% Part 1
-
+''' --- Commented for now to allow for full code run without error
 # Call the main reading method from the modified part 2 code
 Reader.record_data(com_port='COM3', recording_duration=60, n_channels=3, fs=500, out_string='.')
+'''
 
 # %% Part 2
 
@@ -93,3 +95,19 @@ def make_truth_data(action_sequence, epochs_per_action):
 def crop_mi_inputs(features, truth_labels, included_truth_labels):
     '''crop_mi_inputs
     '''
+    bool_index = [] # Initialize an empty list to store the boolean indexes
+    for truth in truth_labels: # Create the boolean indexer
+        bool_index.append(truth in included_truth_labels) # Append either T/F is the current action is in the list to crop
+    bool_index = bool_index
+    # I have mixed feelings on this approach, on the one hand using the in comparison feels pythonic, on the other hand the lack of good direct indexing with strings feels clunky
+    
+    kept_labels = np.array(truth_labels)[bool_index] # Crop the labels to keep using boolean indexing // Labels converted to an array becasue apparently base Python doesn't have a reasonable way to deal with boolean indexing a list with a list
+    kept_features = features[bool_index,:] # Crop the features to keep using boolean indexing
+    
+    return kept_labels, kept_features # Return the cropped arrays
+
+# %% Part 2 Method Calls
+
+emg_data, emg_time = load_data("Smiechowski") # Load in data
+epoched_data = epoch_data(emg_data) # Epoch the data
+features, feature_shorthands = extract_features(epoched_data) # Extract the features and the shorthands // seriously why the shorthands?
