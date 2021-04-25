@@ -108,8 +108,14 @@ def crop_mi_inputs(features, truth_labels, included_truth_labels): # --- MAY BE 
     return kept_labels, kept_features # Return the cropped arrays
 
 # %% Part 2 Method Calls
-
+'''
 emg_data, emg_time = load_data("Smiechowski") # Load in data
+epoched_data = epoch_data(emg_data, 500, 1) # Epoch the data
+features, feature_shorthands = extract_features(epoched_data) # Extract the features and the shorthands // seriously why the shorthands?
+instructed_action = make_truth_data(['rest','rock','rest','paper','rest','scissors']*10, 1) # Create the truth labels
+truth_labels_ps, features_ps = crop_mi_inputs(features, instructed_action, ['paper','scissors']) # Crop out only the paper and scissors labels and features
+'''
+emg_data, emg_time = load_data("Klinger") # Load in data
 epoched_data = epoch_data(emg_data, 500, 1) # Epoch the data
 features, feature_shorthands = extract_features(epoched_data) # Extract the features and the shorthands // seriously why the shorthands?
 instructed_action = make_truth_data(['rest','rock','rest','paper','rest','scissors']*10, 1) # Create the truth labels
@@ -121,13 +127,40 @@ def scatter_plot(two_features, feature_names, truth_matrix):
     '''scatter_plot
     '''
     # Two features is split into 4 variables for ease of use and readability // It's 2021, memory usage is a distant memory, seriously though back when I was all mCU all the time I had an optimization obsession
-    # Paper features
-    feature1_paper = two_features[:,0][truth_matrix == 'paper'] # The first feature
-    feature2_paper = two_features[:,1][truth_matrix == 'paper'] # The second feature
-    # Scissor features
-    feature1_scissors = two_features[:,0][truth_matrix == 'scissors'] # The first feature
-    feature2_scissors = two_features[:,1][truth_matrix == 'scissors'] # The second feature
+    # a features
+    feature1a = two_features[:,0][truth_matrix == truth_matrix[0]] # The first feature
+    feature2a = two_features[:,1][truth_matrix == truth_matrix[0]] # The second feature
+    # b features
+    feature1b = two_features[:,0][truth_matrix == truth_matrix[1]] # The first feature
+    feature2b = two_features[:,1][truth_matrix == truth_matrix[1]] # The second feature
     
     # Plot the features
-    plt.scatter(feature1_paper, feature2_paper)
-    plt.scatter(feature1_scissors, feature2_scissors)
+    plt.title(truth_matrix[0] + ' vs. ' + truth_matrix[1] + ' Scatter Plot')
+    plt.xlabel(feature_names[0])
+    plt.ylabel(feature_names[1])
+    plt.scatter(feature1a, feature2a, label=truth_matrix[0])
+    plt.scatter(feature1b, feature2b, label=truth_matrix[1])
+    plt.legend()
+
+plt.clf() # Clear the figure just in case
+
+# Create a set of subplots comparing features
+plt.suptitle('Feature comparisons') # Add a title over the whole figure
+# Subplot Variance on channel 1 vs channel 2
+plt.subplot(2,2,1)
+scatter_plot(features_ps[:,1:3],feature_shorthands[1:3],truth_labels_ps)
+# Subplot MAC vs ZC on channel 0
+plt.subplot(2,2,2)
+scatter_plot(np.transpose([features_ps[:,3],features_ps[:,6]]),[feature_shorthands[3],feature_shorthands[6]],truth_labels_ps)
+# Subplot Variance on channel 0 vs ZC on channel 2
+plt.subplot(2,2,3)
+scatter_plot(np.transpose([features_ps[:,0],features_ps[:,8]]),[feature_shorthands[0],feature_shorthands[8]],truth_labels_ps)
+# Use a tight layout to avoid plot overlap
+plt.tight_layout()
+
+# Save the current figure
+plt.savefig('Paper_vs._Scissors_Scatter_Plot.png')
+
+# %% Part 4
+
+
