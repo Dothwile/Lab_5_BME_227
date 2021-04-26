@@ -4,7 +4,8 @@
 # %% Imports
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn import preprocessing as skl
+import sklearn as skl
+from sklearn import svm as svm # Otherwise get missing attribute error? Despite importing the entire module above?
 # To import my own module requires this mess
 import sys
 #sys.path.insert(1, r'C:\Users\Artur Smiechowski\Documents\BME227_Code\Lab_5_BME_227')
@@ -73,7 +74,7 @@ def extract_features(epoched_data):
     features = np.concatenate((epoch_var,epoch_mav,epoch_zc),axis=1)
     
     # Normalize the feature array
-    features = skl.scale(features)
+    features = skl.preprocessing.scale(features)
     #--- Cannot get mean and std exactly 0 and 1. Tested on smaller arrays with same syntax and was succesful
     #--- Output mean and std where X*10^-17 and 0.99999... respectively, assuming floating point error or issue with big array
     
@@ -108,7 +109,7 @@ def crop_mi_inputs(features, truth_labels, included_truth_labels): # --- MAY BE 
     return kept_labels, kept_features # Return the cropped arrays
 
 # %% Part 2 Method Calls
-'''
+
 emg_data, emg_time = load_data("Smiechowski") # Load in data
 epoched_data = epoch_data(emg_data, 500, 1) # Epoch the data
 features, feature_shorthands = extract_features(epoched_data) # Extract the features and the shorthands // seriously why the shorthands?
@@ -120,6 +121,7 @@ epoched_data = epoch_data(emg_data, 500, 1) # Epoch the data
 features, feature_shorthands = extract_features(epoched_data) # Extract the features and the shorthands // seriously why the shorthands?
 instructed_action = make_truth_data(['rest','rock','rest','paper','rest','scissors']*10, 1) # Create the truth labels
 truth_labels_ps, features_ps = crop_mi_inputs(features, instructed_action, ['paper','scissors']) # Crop out only the paper and scissors labels and features
+'''
 
 # %% Part 3
 
@@ -148,7 +150,7 @@ plt.clf() # Clear the figure just in case
 plt.suptitle('Feature comparisons') # Add a title over the whole figure
 # Subplot Variance on channel 1 vs channel 2
 plt.subplot(2,2,1)
-scatter_plot(features_ps[:,1:3],feature_shorthands[1:3],truth_labels_ps)
+scatter_plot(np.transpose([features_ps[:,1],features_ps[:,2]]),[feature_shorthands[1],feature_shorthands[2]],truth_labels_ps)
 # Subplot MAC vs ZC on channel 0
 plt.subplot(2,2,2)
 scatter_plot(np.transpose([features_ps[:,3],features_ps[:,6]]),[feature_shorthands[3],feature_shorthands[6]],truth_labels_ps)
@@ -163,4 +165,80 @@ plt.savefig('Paper_vs._Scissors_Scatter_Plot.png')
 
 # %% Part 4
 
+def fit_classifier(features, labels):
+    '''fit_classifier
+    '''
+    binary_labels = [] # Create an empty list to be the binarized lables // Not reassigning labels values to avoid recall issues
+    for label in labels: # Iterate through each label in labels
+        if label == 'scissors': # If scissors append a 1 to binary_labels, else must be paper so append -1
+            binary_labels.append(1)
+        else:
+            binary_labels.append(-1)
+            
+    LinSVC = svm.LinearSVC(C=1e6) # Create the linear SVC object
+    
+    return LinSVC.fit(features, binary_labels) # Return the trained classifier object // Note that training on 20 samples is not enough to converge
+
+Paper_Scissors_LinSVC = fit_classifier(features_ps, truth_labels_ps) # Call the method to create a Paper vs Scissors SVM
+
+w = np.ravel(Paper_Scissors_LinSVC.coef_) # Extract feature weights // Flattened since is already 1 dimensional
+b = Paper_Scissors_LinSVC.intercept_[0] # Extract the bias // Pulled out of array since it's a single value
+
+# Print the equation for z'
+to_print = '' # The string to print, will be added to
+for feature in range(len(feature_shorthands)): # Using a loop for this so it's actually readable
+    rounded = round(w[feature], 3) # Round to 3 places
+    to_print += f'{rounded} * {feature_shorthands[feature]} + ' # Add to to_print
+
+print("z' = " + to_print + f" {round(b, 3)}") # Print the full equation
+   
+# %% Part 5
+
+def predictor_histogram(trained_classifier, features, truth_labels):
+    '''predictor_histogram
+    '''
+    # Isolate the z' scores of the actions
+    paper_scores = trained_classifier.decision_function(features)[truth_labels == 'paper'] # Isolate the z' scores of the true paper actions
+    scissors_scores = trained_classifier.decision_function(features)[truth_labels == 'scissors'] # Isolate the z' scores of the true scissors actions
+    
+    # Clear the figure // If you don't it just overlays the previous ones
+    plt.clf()
+    
+    # Add axis labels and title for plot
+    plt.title('Predictor Histogram')
+    plt.xlabel('Predictor')
+    plt.ylabel('Predicted Count')
+    
+    # Plot the histogram and add a legend
+    plt.hist(paper_scores,bins=10, alpha=0.5, label="Predicted Paper")
+    plt.hist(scissors_scores,bins=10, alpha=0.5, label="Predicted Scissors")
+    plt.axvline(x=0, label="Threshhold") # Creates a vertical line at the threshhold
+    plt.legend() # Enables data legend
+    
+    # Save the figure
+    plt.savefig('Predictor_Histogram.png')
+ 
+def evaluate_classifier(trained_classifier, features, truth_labels):
+    '''evaluate_classifier
+    '''
+    # Reusing binarization code since can't compare strings and floats // Feels like there's a better way since I'm repeating here but other than saving binary_labels as global var am unsure
+    binary_labels = [] # Create an empty list to be the binarized lables // Not reassigning labels values to avoid recall issues
+    for label in truth_labels: # Iterate through each label in labels
+        if label == 'scissors': # If scissors append a 1 to binary_labels, else must be paper so append -1
+            binary_labels.append(1)
+        else:
+            binary_labels.append(-1)
+
+    print("Accuracy " + str(trained_classifier.score(features, binary_labels))) # Print the accuracy of the SVC
+    
+    
+    plt.clf() # Clear figure just in case
+    # Create the confusion matrix
+    skl.metrics.plot_confusion_matrix(trained_classifier, features_ps, binary_labels)
+    plt.savefig('Confusion_Matrix.png') # Save the figure
+
+predictor_histogram(Paper_Scissors_LinSVC, features_ps, truth_labels_ps)
+evaluate_classifier(Paper_Scissors_LinSVC, features_ps, truth_labels_ps)
+
+# %% Part 6
 
