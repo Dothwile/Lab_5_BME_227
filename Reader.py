@@ -69,7 +69,7 @@ def record_data(com_port='COM4', recording_duration=60, n_channels=3, fs=500, ou
     Records emg data from multiple channels for given time
     
     Parameters
-    com_port ~ string ~ specifices the port the emg device is on
+    com_port : string ~ specifices the port the emg device is on
     recording_duration ~ int ~ the recording period in seconds
     n_channels ~ int ~ the number of channels/devices being recorded
     fs ~ int ~ the emg sampling frequency
